@@ -39,7 +39,12 @@ def get_current_user(token:str=Depends(oauth2_scheme),db:Session=Depends(get_db)
             raise HTTPException(
             status_code=401,
             detail="Token 無效")
-
+        try:
+            user_id = int(user_id)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=401,
+                detail="Token 無效")
     except jwt.PyJWTError:
         raise HTTPException(status_code=401,detail="Token 無效")
         
