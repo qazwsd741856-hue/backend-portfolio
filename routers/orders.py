@@ -7,6 +7,7 @@ from models.product import Product
 from models.user import User 
 from sqlalchemy.exc import SQLAlchemyError,IntegrityError
 from security import get_current_user
+from cache import delete_product_cache
 
 orders_router=APIRouter(prefix="/orders",tags=["orders"])
 
@@ -59,6 +60,9 @@ def create_order(data: OrderCreate,
             
             db.add(order)
             db.commit()
+
+            delete_product_cache(product.id)
+
             db.refresh(order)
             
             return order
@@ -92,6 +96,8 @@ def delete_order(db:Session=Depends(get_db),
         
         db.delete(order)
         db.commit()
+        delete_product_cache(product.id)
+
     except SQLAlchemyError as e:
         print(e)
         db.rollback()
@@ -125,6 +131,7 @@ def update_order(data:OrderUpdate,
             order.amount=data.amount
         
         db.commit()
+        delete_product_cache(product.id)
         db.refresh(order)
         return order
     
