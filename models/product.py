@@ -10,5 +10,5 @@ class Product(Base):
     name=Column(String,nullable=False)
     price=Column(Integer,nullable=False)
     stock=Column(Integer,nullable=False)
-    
+    description=Column(String,nullable=True)
     orders=relationship("Order",back_populates="product")
