@@ -32,27 +32,30 @@ def get_products(name:str | None=None,
                  limit:int =Query(10,ge=1,le=100),
                  page:int =Query(1,ge=1),
                  db:Session=Depends(get_db)):
-    
-    offset=(page-1)*limit
-    query=db.query(Product)
-    
-    if name is not None:
-        query=query.filter(Product.name==name)
-    if min_stock is not None:
-        query=query.filter(Product.stock>=min_stock)
-    if min_price is not None:
-        query=query.filter(Product.price>=min_price)
-    
-    total=query.count()
-    
-    if order=="asc":
-        query=query.order_by(Product.price.asc())
-    else:
-        query=query.order_by(Product.price.desc())
-    
-    pages=math.ceil(total/limit)
-    products=query.offset(offset).limit(limit).all()
-    
+    try:
+        offset=(page-1)*limit
+        query=db.query(Product)
+        
+        if name is not None:
+            query=query.filter(Product.name==name)
+        if min_stock is not None:
+            query=query.filter(Product.stock>=min_stock)
+        if min_price is not None:
+            query=query.filter(Product.price>=min_price)
+        
+        total=query.count()
+        
+        if order=="asc":
+            query=query.order_by(Product.price.asc())
+        else:
+            query=query.order_by(Product.price.desc())
+        
+        pages=math.ceil(total/limit)
+        products=query.offset(offset).limit(limit).all()
+
+    except SQLAlchemyError:
+        logger.exception("取得商品列表時發生資料庫錯誤")
+        raise HTTPException(status_code=500,detail="資料庫錯誤")
     return {"page":page,"limit":limit,"total":total,"total_pages":pages,"items":products}
 
 
@@ -72,7 +75,7 @@ def get_product(id: int=Path(gt=0),db:Session=Depends(get_db)):
             return json.loads(cached_product)
 
         product=db.query(Product).filter(Product.id==id).first()
-        
+
         if product is None:
             raise HTTPException(status_code=404,detail="未找到商品")
         
@@ -90,6 +93,7 @@ def get_product(id: int=Path(gt=0),db:Session=Depends(get_db)):
         return product
 
     except SQLAlchemyError:
+        logger.exception("取得商品時發生資料庫錯誤")
         raise HTTPException(status_code=500, detail="資料庫錯誤")
         
     
@@ -110,6 +114,7 @@ def create_product(data: ProductCreate,
         return product
     
     except SQLAlchemyError:
+        logger.exception("建立商品時發生資料庫錯誤")
         db.rollback()
         raise HTTPException(status_code=500, detail="資料庫錯誤")
         
@@ -139,6 +144,7 @@ def update_product(data: ProductUpdate,
         
     
     except SQLAlchemyError:
+        logger.exception("修改商品時發生資料庫錯誤")
         db.rollback()
         raise HTTPException(status_code=500, detail="資料庫錯誤")
    
@@ -161,5 +167,6 @@ def delete_product(id: int=Path(gt=0),
         return {"message": "商品刪除成功"}
     
     except SQLAlchemyError:
+        logger.exception("刪除商品時發生資料庫錯誤")
         db.rollback()
         raise HTTPException(status_code=500, detail="資料庫錯誤")             

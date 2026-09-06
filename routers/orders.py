@@ -8,6 +8,9 @@ from models.user import User
 from sqlalchemy.exc import SQLAlchemyError,IntegrityError
 from security import get_current_user
 from cache import delete_product_cache
+import logging
+
+logger=logging.getLogger(__name__)
 
 orders_router=APIRouter(prefix="/orders",tags=["orders"])
 
@@ -24,8 +27,8 @@ def get_orders(db:Session=Depends(get_db),current_user: User = Depends(get_curre
         orders=query.all()
         return orders
     
-    except SQLAlchemyError as e:
-        print(e)
+    except SQLAlchemyError:
+        logger.exception("取得訂單列表時發生資料庫錯誤")
         raise HTTPException(status_code=500, detail="資料庫錯誤")     
 
 @orders_router.get("/{id}",response_model=OrderReturn)
@@ -39,8 +42,8 @@ def get_order(id:int=Path(gt=0),
         if current_user.role!="admin" and current_user.id != order.user_id:
             raise HTTPException(status_code=403, detail="非您的訂單")
         return order
-    except SQLAlchemyError as e:
-        print(e)
+    except SQLAlchemyError:
+        logger.exception("取得訂單時發生資料庫錯誤")
         raise HTTPException(status_code=500, detail="資料庫錯誤") 
 
 
@@ -70,12 +73,12 @@ def create_order(data: OrderCreate,
         else:
             raise HTTPException(status_code=400, detail=f"商品不足,餘額為{product.stock}")
         
-    except IntegrityError as e:
-        print(e)
+    except IntegrityError:
+        logger.exception("建立訂單時發生資料完整性錯誤")
         db.rollback()
         raise HTTPException(status_code=400, detail="訂單資料不正確")
-    except SQLAlchemyError as e:
-        print(e)
+    except SQLAlchemyError:
+        logger.exception("建立訂單時發生資料庫錯誤")
         db.rollback()
         raise HTTPException(status_code=500, detail="資料庫錯誤")
 
@@ -98,8 +101,8 @@ def delete_order(db:Session=Depends(get_db),
         db.commit()
         delete_product_cache(product.id)
 
-    except SQLAlchemyError as e:
-        print(e)
+    except SQLAlchemyError:
+        logger.exception("刪除訂單時發生資料庫錯誤")
         db.rollback()
         raise HTTPException(status_code=500, detail="資料庫錯誤")
     
@@ -135,8 +138,8 @@ def update_order(data:OrderUpdate,
         db.refresh(order)
         return order
     
-    except SQLAlchemyError as e:
-        print(e)
+    except SQLAlchemyError:
+        logger.exception("更改訂單時發生資料庫錯誤")
         db.rollback()
         raise HTTPException(status_code=500, detail="資料庫錯誤")
     
