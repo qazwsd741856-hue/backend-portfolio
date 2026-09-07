@@ -6,7 +6,6 @@ on:
       - CI
     types:
       - completed
-
     branches:
       - main
 
@@ -14,7 +13,26 @@ jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Deploy to server
-        run: echo "CD workflow started successfully"
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_HOST_KEY: ${{ secrets.SERVER_HOST_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          printf '%s %s\n' "$SERVER_HOST" "$SERVER_HOST_KEY" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh "$SERVER_USER@$SERVER_HOST" "whoami && hostname"
