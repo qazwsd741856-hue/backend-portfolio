@@ -35,4 +35,4 @@ jobs:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          ssh "$SERVER_USER@$SERVER_HOST" "whoami && hostname"
+          ssh "$SERVER_USER@$SERVER_HOST" "sudo -n docker compose version"
