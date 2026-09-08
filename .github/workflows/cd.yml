@@ -35,5 +35,26 @@ jobs:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          ssh "$SERVER_USER@$SERVER_HOST" "cd ~/backend-portfolio && git pull --ff-only origin main && sudo docker compose build api && sudo docker compose run --rm api alembic upgrade head && sudo docker compose up -d api"
-                  
+          ssh "$SERVER_USER@$SERVER_HOST" '
+            cd ~/backend-portfolio &&
+            git pull --ff-only origin main &&
+            sudo docker compose build api &&
+            sudo docker compose run --rm api alembic upgrade head &&
+            sudo docker compose up -d api &&
+
+            for i in {1..12}; do
+              status=$(sudo docker inspect --format="{{.State.Health.Status}}" backend-api)
+
+              echo "API health status: $status"
+
+              if [ "$status" = "healthy" ]; then
+                echo "API is healthy"
+                exit 0
+              fi
+
+              sleep 5
+            done
+
+            echo "API did not become healthy in time"
+            exit 1
+          '
