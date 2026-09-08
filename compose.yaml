@@ -1,6 +1,7 @@
 services:
   api:
     build: .
+    image: backend-portfolio-api:${IMAGE_TAG:-latest}
     container_name: backend-api
     env_file:
       - .env
