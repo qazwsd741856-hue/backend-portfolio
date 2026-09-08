@@ -35,5 +35,5 @@ jobs:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          ssh "$SERVER_USER@$SERVER_HOST" "cd ~/backend-portfolio && git pull --ff-only origin main && sudo docker compose build api"
+          ssh "$SERVER_USER@$SERVER_HOST" "cd ~/backend-portfolio && git pull --ff-only origin main && sudo docker compose build api && sudo docker compose run --rm api alembic upgrade head"
                   
