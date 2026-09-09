@@ -42,8 +42,8 @@ jobs:
             IMAGE_TAG="\$DEPLOY_SHA"
 
             cd ~/backend-portfolio || exit 1
-            if sudo docker inspect backend-api --format '{{.Config.Image}}' > /dev/null 2>&1; then
-              CURRENT_IMAGE=\$(sudo docker inspect backend-api --format '{{.Config.Image}}')
+            if sudo docker inspect backend-api --format "{{.Config.Image}}" > /dev/null 2>&1; then
+              CURRENT_IMAGE=\$(sudo docker inspect backend-api --format "{{.Config.Image}}")
               CURRENT_TAG="\${CURRENT_IMAGE##*:}"
               CAN_ROLLBACK=true
 
@@ -91,7 +91,7 @@ jobs:
             
             ROLLBACK_SUCCESS=false
             for i in {1..12}; do 
-              status=\$(sudo docker inspect backend-api --format '{{.State.Health.Status}}')
+              status=\$(sudo docker inspect backend-api --format "{{.State.Health.Status}}")
 
               if [ "\$status" = "healthy" ]; then
                 ROLLBACK_SUCCESS=true
