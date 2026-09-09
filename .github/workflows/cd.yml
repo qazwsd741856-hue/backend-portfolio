@@ -82,7 +82,7 @@ jobs:
             fi
 
             if [ "\$CAN_ROLLBACK" = "false" ]; then
-              echo "Can't rollback,no useful image"
+              echo "Cannot rollback,no useful image"
               exit 1
             else 
               echo "Rollback processing"
