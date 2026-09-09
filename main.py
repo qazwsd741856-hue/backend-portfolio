@@ -12,6 +12,6 @@ app.include_router(user_router)
 app.include_router(orders_router)
 app.include_router(admin_router)
 
-@app.get("/health")
+@app.get("/health",status_code=500)
 def health():
-    return {"status": "ok"}
+    return {"status": "rollback-test"}
