@@ -41,26 +41,71 @@ jobs:
             DEPLOY_SHA='$DEPLOY_SHA'
             IMAGE_TAG="\$DEPLOY_SHA"
 
-            cd ~/backend-portfolio &&
-            git fetch origin &&
-            git reset --hard "\$DEPLOY_SHA" &&
-            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose build api &&
-            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose run --rm api alembic upgrade head &&
-            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose up -d api &&
+            cd ~/backend-portfolio || exit 1
+            if sudo docker inspect backend-api --format '{{.Config.Image}}' > /dev/null 2>&1; then
+              CURRENT_IMAGE=\$(sudo docker inspect backend-api --format '{{.Config.Image}}')
+              CURRENT_TAG="\${CURRENT_IMAGE##*:}"
+              CAN_ROLLBACK=true
 
+              echo "CURRENT_IMAGE:\${CURRENT_IMAGE}"
+            else
+              CAN_ROLLBACK=false
+
+              echo "No existing API container, rollback will not be available"
+            fi
+
+            git fetch origin || exit 1
+            git reset --hard "\$DEPLOY_SHA" || exit 1
+            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose build api || exit 1
+            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose run --rm api alembic upgrade head || exit 1
+            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose up -d api || exit 1
+            
+            DEPLOY_SUCCESS=false
             for i in {1..12}; do
               status=\$(sudo docker inspect --format="{{.State.Health.Status}}" backend-api)
 
               echo "API health status: \$status"
 
               if [ "\$status" = "healthy" ]; then
-                echo "API is healthy"
-                exit 0
+                DEPLOY_SUCCESS=true
+                break
               fi
 
               sleep 5
             done
 
-            echo "API did not become healthy in time"
-            exit 1
-          "
+            if [ "\$DEPLOY_SUCCESS" = "true" ]; then
+              echo "Deployment successful"
+              exit 0
+            else 
+              echo "Deployment failed , starting rollback"
+            fi
+
+            if [ "\$CAN_ROLLBACK" = "false" ]; then
+              echo "Can't rollback,no useful image"
+              exit 1
+            else 
+              echo "Rollback processing"
+              sudo IMAGE_TAG="\$CURRENT_TAG" docker compose up -d api || exit 1
+            fi
+            
+            ROLLBACK_SUCCESS=false
+            for i in {1..12}; do 
+              status=\$(sudo docker inspect backend-api --format '{{.State.Health.Status}}')
+
+              if [ "\$status" = "healthy" ]; then
+                ROLLBACK_SUCCESS=true
+                break
+              fi
+
+              sleep 5
+            done
+
+            if [ "\$ROLLBACK_SUCCESS" = "true" ]; then
+              echo "Rollback successful"
+              exit 1
+            else
+              echo "Rollback failed"
+              exit 1  
+            fi  
+            "
