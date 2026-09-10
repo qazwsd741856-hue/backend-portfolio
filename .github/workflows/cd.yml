@@ -71,9 +71,11 @@ jobs:
 
             git fetch origin || exit 1
             git reset --hard "\$DEPLOY_SHA" || exit 1
-            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose build api || exit 1
-            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose run --rm api alembic upgrade head || exit 1
-            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose up -d api || exit 1
+
+            sudo docker run --rm --network backend-portfolio_default -v "./nginx/default.prod.conf:/etc/nginx/conf.d/default.conf:ro" -v "/etc/letsencrypt:/etc/letsencrypt:ro" nginx nginx -t || exit 1
+            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose -f compose.yaml -f compose.prod.yaml build api || exit 1
+            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose -f compose.yaml -f compose.prod.yaml run --rm api alembic upgrade head || exit 1
+            sudo IMAGE_TAG="\$IMAGE_TAG" docker compose -f compose.yaml -f compose.prod.yaml up -d api || exit 1
             
             DEPLOY_SUCCESS=false
             for i in {1..12}; do
@@ -90,8 +92,11 @@ jobs:
             done
 
             if [ "\$DEPLOY_SUCCESS" = "true" ]; then
+              echo "API deployment successful"
+              sudo IMAGE_TAG="\$IMAGE_TAG" docker compose -f compose.yaml -f compose.prod.yaml up -d --no-deps web || exit 1
+              sudo docker exec backend-portfolio-web-1 nginx -t || exit 1
+              sudo docker exec backend-portfolio-web-1 nginx -s reload || exit 1
               echo "Deployment successful"
-              
               DEPLOY_IMAGE="backend-portfolio-api:\$DEPLOY_SHA"
 
               for image in \$(sudo docker image ls "backend-portfolio-api:*" --format "{{.Repository}}:{{.Tag}}"); do
@@ -113,7 +118,7 @@ jobs:
               exit 1
             else 
               echo "Rollback processing"
-              sudo IMAGE_TAG="\$CURRENT_TAG" docker compose up -d api || exit 1
+              sudo IMAGE_TAG="\$CURRENT_TAG" docker compose -f compose.yaml -f compose.prod.yaml up -d api || exit 1
             fi
             
             ROLLBACK_SUCCESS=false
