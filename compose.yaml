@@ -1,7 +1,7 @@
 services:
   api:
     build: .
-    image: backend-portfolio-api:${IMAGE_TAG:-latest}
+    image: backend-portfolio-api:${IMAGE_TAG:?IMAGE_TAG is required}
     container_name: backend-api
     env_file:
       - .env
@@ -21,6 +21,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: "256m"
   web:
     image: nginx
     ports:
@@ -35,6 +36,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: "64m"
+    restart: unless-stopped
   db:
     image: postgres:17
     environment:
@@ -53,6 +56,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    mem_limit: "256m"
+    restart: unless-stopped
   redis:
     image: redis:7
     volumes:
@@ -63,6 +68,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"  
+    mem_limit: "128m"
+    restart: unless-stopped
 volumes:
   postgres_data:
   redis_data:
