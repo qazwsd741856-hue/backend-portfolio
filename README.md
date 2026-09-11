@@ -1,426 +1,207 @@
 # Backend Portfolio API
 
-A backend REST API built with FastAPI for managing users, products, and
-orders.
+以 **FastAPI** 開發的 RESTful API 後端作品，實作使用者、商品與訂單管理，包含 JWT 身分驗證、角色權限控制、庫存管理、PostgreSQL、Redis 快取與自動化測試。
 
-The project includes JWT authentication, role-based access control
-(RBAC), inventory management, PostgreSQL database migrations, automated
-testing, and cloud deployment.
+專案使用 Docker Compose 建立完整服務環境，正式部署於 **Google Cloud Compute Engine VM**，透過 Nginx 提供 Reverse Proxy 與 HTTPS，並使用 GitHub Actions 建立 CI/CD 自動測試、部署與失敗回滾流程。
 
 ## Live Demo
 
-The API is deployed on Render and uses PostgreSQL hosted on Neon.
+- API: https://backend-portfolio-api.duckdns.org
+- Swagger UI: https://backend-portfolio-api.duckdns.org/docs
+- Health Check: https://backend-portfolio-api.duckdns.org/health
 
--   **Swagger UI:** https://backend-portfolio-a8qy.onrender.com/docs
--   **API Base URL:** https://backend-portfolio-a8qy.onrender.com/
-
-> The service uses Render's free tier, so the first request may take a
-> short time if the service has been inactive.
+---
 
 ## Features
 
-### Authentication
+### Authentication & Authorization
 
--   User registration
--   Password hashing with Argon2
--   OAuth2 password login
--   JWT access token authentication
--   Disabled account validation
--   Protected endpoints using FastAPI dependencies
+- 使用者註冊與登入
+- Argon2 密碼雜湊
+- JWT Access Token
+- User / Admin Role-Based Access Control（RBAC）
+- 使用者停權管理
 
 ### Product Management
 
--   Get product list
--   Get product by ID
--   Filter products by name, minimum price, and minimum stock
--   Sort products by price
--   Pagination support
--   Admin-only product creation, update, and deletion
+- 商品 CRUD
+- 商品條件篩選、排序與 Pagination
+- Admin-only 商品管理
 
-### Order Management
+### Order & Inventory
 
--   Authenticated order creation
--   Users can access only their own orders
--   Admins can access all orders
--   Inventory validation before order creation
--   Automatic stock deduction when an order is created
--   Automatic stock adjustment when order quantity changes
--   Automatic stock restoration when an order is deleted
--   Owner/Admin authorization for individual order operations
+- 訂單 CRUD
+- 一般使用者僅能操作自己的訂單
+- Admin 可查看所有訂單
+- 建立訂單時檢查並扣除庫存
+- 修改訂單時同步調整庫存
+- 刪除訂單時自動回補庫存
 
-### Administration
+### Cache
 
--   Role-based access control
--   View all users
--   Change user roles
--   Activate or suspend user accounts
--   Prevent administrators from changing their own role
--   Prevent administrators from suspending their own account
+- Redis Cache-Aside 商品快取
+- TTL 與 Cache Invalidation
+- Redis 異常時回退至 Database 查詢
+
+---
 
 ## Tech Stack
 
--   Python
--   FastAPI
--   Uvicorn
--   SQLAlchemy ORM
--   PostgreSQL
--   Neon
--   Pydantic
--   Alembic
--   PyJWT
--   pwdlib / Argon2
--   Pytest
--   Git / GitHub
--   Render
+| Category | Technologies |
+|---|---|
+| Backend | Python 3.12, FastAPI, Uvicorn, Pydantic |
+| ORM / Database | SQLAlchemy, PostgreSQL 17, Alembic |
+| Authentication | OAuth2, JWT, Argon2 |
+| Cache | Redis 7 |
+| Testing | Pytest |
+| Infrastructure | Docker, Docker Compose, Nginx |
+| Deployment | Google Cloud Compute Engine, Let's Encrypt |
+| CI/CD | GitHub Actions |
 
-## Architecture
+---
 
-``` text
-Client / Swagger UI
+## System Architecture
+
+![Backend Portfolio API System Architecture](assets/system-architecture.png)
+
+正式環境僅公開 Nginx 的 `80/443`，FastAPI、PostgreSQL 與 Redis 透過 Docker Network 進行內部通訊。
+
+HTTP Request 會由 Nginx Redirect 至 HTTPS，TLS 憑證使用 Let's Encrypt / Certbot 管理。
+
+---
+
+## API Overview
+
+| Resource | Main Endpoints | Permission |
+|---|---|---|
+| Users | Register / Login | Public |
+| Products | GET | Public |
+| Products | POST / PUT / DELETE | Admin |
+| Orders | CRUD | User / Admin |
+| Admin Users | Role / Status Management | Admin |
+
+完整 API Request / Response 格式可透過 [Swagger UI](https://backend-portfolio-api.duckdns.org/docs) 查看。
+
+---
+
+## CI/CD
+
+GitHub Actions 負責自動測試與正式環境部署。
+
+```text
+Push / Pull Request
         |
         v
-Render Web Service
+      CI
+        |
+     Pytest
+        |
+        | main CI passed
+        v
+      CD
         |
         v
-FastAPI
+   SSH to GCP VM
         |
-        +--------------------+
-        |                    |
-        v                    v
-     Routers          Authentication / RBAC
-        |                    |
-        +---------+----------+
-                  |
-                  v
-          SQLAlchemy ORM
-                  |
-               Session
-                  |
-               Engine
-                  |
-            Connection
-                  |
-                  v
-        PostgreSQL (Neon)
+        v
+ Checkout Target Commit
+        |
+        v
+Validate Nginx Config
+        |
+        v
+Build Versioned Image
+        |
+        v
+Alembic Migration
+        |
+        v
+Deploy FastAPI
+        |
+        v
+Docker Health Check
+      /       \
+ success     failure
+    |           |
+    v           v
+Update Web    Rollback
 ```
 
-## Project Structure
+API Docker Image 使用 **Git commit SHA** 作為版本 Tag。部署後會執行 Container Health Check；若新版 API 無法正常啟動，部署流程會嘗試回滾至上一個可用 Image。
 
-``` text
-backend-portfolio/
-|
-|-- main.py
-|-- database.py
-|-- security.py
-|
-|-- models/
-|   |-- user.py
-|   |-- product.py
-|   `-- order.py
-|
-|-- schemas/
-|   |-- user.py
-|   |-- product.py
-|   `-- order.py
-|
-|-- routers/
-|   |-- users.py
-|   |-- products.py
-|   |-- orders.py
-|   `-- admin.py
-|
-|-- tests/
-|   |-- conftest.py
-|   |-- test_users.py
-|   |-- test_products.py
-|   `-- test_orders.py
-|
-|-- alembic/
-|   `-- versions/
-|
-|-- alembic.ini
-|-- requirements.txt
-|-- .env.example
-`-- README.md
-```
-
-## Database
-
-The application uses PostgreSQL in the deployed environment, hosted on
-Neon.
-
-SQLAlchemy is used as the ORM layer. Database connection information is
-provided through the `DATABASE_URL` environment variable instead of
-being stored directly in the source code.
-
-## Installation
-
-Clone the repository:
-
-``` bash
-git clone <repository-url>
-cd backend-portfolio
-```
-
-Create and activate a Python virtual environment, then install the
-dependencies:
-
-``` bash
-pip install -r requirements.txt
-```
-
-## Environment Variables
-
-Create a `.env` file based on `.env.example`:
-
-``` text
-SECRET_KEY=your-secret-key
-DATABASE_URL=your-postgresql-database-url
-```
-
-The real `.env` file contains sensitive information and should not be
-committed to version control.
-
-In the deployed environment, these values are configured as Render
-environment variables.
-
-## Running the API Locally
-
-Start the development server:
-
-``` bash
-uvicorn main:app --reload
-```
-
-The API will be available at:
-
-``` text
-http://127.0.0.1:8000
-```
-
-Interactive API documentation:
-
-``` text
-http://127.0.0.1:8000/docs
-```
-
-## API Endpoints
-
-### Users
-
-  Method   Endpoint         Authentication   Description
-  -------- ---------------- ---------------- --------------------------------------
-  POST     `/users`         No               Register a new user
-  POST     `/users/login`   No               Login and receive a JWT access token
-
-### Products
-
-  ------------------------------------------------------------------------
-  Method            Endpoint           Authentication    Description
-  ----------------- ------------------ ----------------- -----------------
-  GET               `/products`        No                Get products with
-                                                         filtering,
-                                                         sorting, and
-                                                         pagination
-
-  GET               `/products/{id}`   No                Get a product by
-                                                         ID
-
-  POST              `/products`        Admin             Create a product
-
-  PUT               `/products/{id}`   Admin             Update a product
-
-  DELETE            `/products/{id}`   Admin             Delete a product
-  ------------------------------------------------------------------------
-
-### Orders
-
-  -----------------------------------------------------------------------
-  Method            Endpoint          Authentication    Description
-  ----------------- ----------------- ----------------- -----------------
-  GET               `/orders`         User/Admin        Get own orders;
-                                                        admins can get
-                                                        all orders
-
-  GET               `/orders/{id}`    Owner/Admin       Get an order by
-                                                        ID
-
-  POST              `/orders`         User/Admin        Create an order
-                                                        and deduct
-                                                        inventory
-
-  PUT               `/orders/{id}`    Owner/Admin       Update order
-                                                        quantity and
-                                                        synchronize
-                                                        inventory
-
-  DELETE            `/orders/{id}`    Owner/Admin       Delete an order
-                                                        and restore
-                                                        inventory
-  -----------------------------------------------------------------------
-
-### Admin
-
-  ----------------------------------------------------------------------------------
-  Method            Endpoint                     Authentication    Description
-  ----------------- ---------------------------- ----------------- -----------------
-  GET               `/admin/users`               Admin             Get all users
-
-  PATCH             `/admin/users/{id}/role`     Admin             Change a user's
-                                                                   role
-
-  PATCH             `/admin/users/{id}/status`   Admin             Activate or
-                                                                   suspend a user
-  ----------------------------------------------------------------------------------
-
-## Authentication and Authorization
-
-The API uses OAuth2 password login and JWT bearer tokens.
-
-After a successful login, the API returns an access token. Protected
-endpoints decode the JWT to identify the current user and validate
-account status.
-
-Role-based authorization is implemented through FastAPI dependencies:
-
-``` text
-Request
-   |
-   v
-JWT Authentication
-   |
-   v
-Current User
-   |
-   +--> Regular User --> User-owned resources
-   |
-   `--> Admin --------> Administrative operations
-```
-
-Unauthorized or forbidden operations return the appropriate HTTP status
-codes, such as `401 Unauthorized` or `403 Forbidden`.
-
-## Order and Inventory Logic
-
-Order operations are synchronized with product inventory.
-
-``` text
-Create Order
-    |
-    v
-Validate Stock
-    |
-    v
-Deduct Product Stock
-    |
-    v
-Create Order
-    |
-    v
-Commit Transaction
-```
-
-When an order quantity is updated, the stock difference is calculated
-and synchronized with the product inventory.
-
-When an order is deleted, the ordered quantity is restored to product
-stock.
-
-## Database Migration
-
-Database schema migrations are managed with Alembic.
-
-After changing SQLAlchemy models, generate a migration:
-
-``` bash
-alembic revision --autogenerate -m "migration description"
-```
-
-Review the generated migration file before applying it.
-
-Apply pending migrations:
-
-``` bash
-alembic upgrade head
-```
-
-Alembic compares the SQLAlchemy model metadata with the current database
-schema when generating migrations and tracks the applied database
-revision through its migration version history.
+---
 
 ## Testing
 
-Run the automated test suite with:
+使用 Pytest 測試 API、Authentication、Authorization、訂單與庫存邏輯。
 
-``` bash
-python -m pytest -v
+```bash
+python -m pytest
 ```
 
-The project currently includes **37 automated tests** covering the main
-API workflows, including:
+目前測試結果：
 
--   User registration and authentication
--   Product operations
--   Order operations
--   Authorization and ownership rules
--   Inventory deduction and restoration
-
-Current verified result:
-
-``` text
+```text
 37 passed
 ```
 
+CI 在 Push / Pull Request 時也會自動執行測試。
+
+---
+
+## Project Structure
+
+```text
+backend-portfolio/
+├── routers/             # API Routes
+├── models/              # SQLAlchemy Models
+├── schemas/             # Pydantic Schemas
+├── tests/               # Pytest
+├── alembic/             # Database Migrations
+├── nginx/               # Dev / Production Nginx Config
+├── .github/workflows/   # CI/CD
+├── main.py
+├── database.py
+├── security.py
+├── cache.py
+├── compose.yaml
+├── compose.dev.yaml
+├── compose.prod.yaml
+└── dockerfile
+```
+
+---
+
+## Local Development
+
+參考 `.env.example` 建立 `.env.dev` 後：
+
+```bash
+docker compose --env-file .env.dev \
+  -f compose.yaml \
+  -f compose.dev.yaml \
+  up -d --build
+```
+
+啟動後：
+
+- Swagger UI: http://localhost/docs
+- Health Check: http://localhost/health
+
+---
+
 ## Deployment
 
-The production API is deployed using:
+Production 部署於 **Google Cloud Compute Engine VM**。
 
-``` text
-GitHub
-   |
-   v
-Render
-   |
-   v
-FastAPI / Uvicorn
-   |
-   v
-SQLAlchemy
-   |
-   v
-PostgreSQL (Neon)
+正式環境由 Docker Compose 管理：
+
+```text
+Docker Compose
+├── Nginx
+├── FastAPI
+├── PostgreSQL
+└── Redis
 ```
 
-Render installs the project dependencies from `requirements.txt` and
-starts the API with:
-
-``` bash
-uvicorn main:app --host 0.0.0.0 --port $PORT
-```
-
-Sensitive configuration such as `DATABASE_URL` and `SECRET_KEY` is
-stored in Render environment variables and is not committed to GitHub.
-
-## Production Verification
-
-The deployed API has been manually verified for the following workflows:
-
--   Public Swagger documentation
--   User registration
--   User login and JWT generation
--   Protected endpoint authentication
--   Regular-user permission restrictions
--   Admin-only product creation
--   Order creation
--   Automatic inventory deduction
--   Order deletion
--   Automatic inventory restoration
-
-## Notes
-
-Database primary-key IDs are unique identifiers and are not expected to
-remain sequential after rows are deleted.
-
-For example, deleting order ID `2` does not require the next order to
-reuse ID `2`. PostgreSQL may continue with the next generated
-identifier.
+搭配 Nginx Reverse Proxy、HTTPS、Container Health Check、Restart Policy、Log Rotation 與 GitHub Actions CI/CD。
