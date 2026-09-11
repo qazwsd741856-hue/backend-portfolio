@@ -3,7 +3,7 @@ from models.product import Product
 import pytest
 
 def test_create_product(admin_token,client):
-     response=client.post("/products",json={"name":"鍵盤","price":2000,"stock":10},headers={"Authorization":f"Bearer {admin_token}"})   
+     response=client.post("/products",json={"name":"鍵盤","price":2000,"stock":10,"description":"機械式鍵盤"},headers={"Authorization":f"Bearer {admin_token}"})   
      
      assert response.status_code==201
      result =response.json()
@@ -11,6 +11,8 @@ def test_create_product(admin_token,client):
      assert result["name"]=="鍵盤"
      assert result["price"]==2000
      assert result["stock"]==10
+     assert result["description"]=="機械式鍵盤"
+     
 def test_create_product_by_user(user_token,client):
      response=client.post("/products",json={"name":"鍵盤","price":2000,"stock":10},headers={"Authorization":f"Bearer {user_token}"})   
      

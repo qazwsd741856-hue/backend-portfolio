@@ -573,4 +573,4 @@ def test_get_order_without_login(url,client):
 @pytest.mark.parametrize("method,url",[("post","/orders"),("put","/orders/9999"),("delete","/orders/9999")])
 def test_order_without_login(method, url,client):
     response=client.request(method,url)
-    response.status_code==401
+    assert response.status_code==401

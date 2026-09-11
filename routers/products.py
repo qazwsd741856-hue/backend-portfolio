@@ -105,7 +105,7 @@ def create_product(data: ProductCreate,
                    db:Session=Depends(get_db),
                    admin:User=Depends(require_admin)):
     try:
-        product=Product(name=data.name,price=data.price,stock=data.stock)
+        product=Product(name=data.name,price=data.price,stock=data.stock,description=data.description)
         
         db.add(product)
         db.commit()
@@ -135,6 +135,7 @@ def update_product(data: ProductUpdate,
         product.name=data.name
         product.price=data.price
         product.stock=data.stock
+        product.description=data.description
         
         db.commit()
         delete_product_cache(product.id)
