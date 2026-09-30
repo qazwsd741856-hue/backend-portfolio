@@ -1,6 +1,7 @@
 from conftest import TestSessionLocal
 from models.product import Product
 import pytest
+from threading import Thread,Barrier
 
 def test_create_product(admin_token,client):
      response=client.post("/products",json={"name":"鍵盤","price":2000,"stock":10,"description":"機械式鍵盤"},headers={"Authorization":f"Bearer {admin_token}"})   
@@ -62,3 +63,42 @@ def test_database_is_empty(setup_database):
 def test_get_product_invalid_id(id, client):
     response=client.get(f"/products/{id}")
     assert response.status_code==422
+
+def test_concurrent_order_and_add_stock(admin_token,client,test_product,user_token):
+    barrier=Barrier(2)
+    responses=[]
+
+    def place_order():
+        barrier.wait()
+        response=client.post("/orders",
+                             json={"product_id":test_product.id,"amount":3},
+                             headers={"Authorization":f"Bearer {user_token}"})
+        responses.append(response)
+
+    def add_stock():
+        barrier.wait()
+        response=client.patch(f"/products/{test_product.id}/stock",
+                              json={"amount":20},
+                              headers={"Authorization":f"Bearer {admin_token}"})
+        responses.append(response)
+    thread1=Thread(target=place_order)
+    thread2=Thread(target=add_stock)
+
+    thread1.start()
+    thread2.start()
+    thread1.join()
+    thread2.join()
+    assert len(responses)==2
+    status_code=[response.status_code for response in responses]
+    status_code.sort()
+    assert status_code==[200,201]
+
+    db=TestSessionLocal()
+    product=db.query(Product).filter(Product.id==test_product.id).first()
+
+    assert product.stock==27
+    db.close()
+
+
+   
+    

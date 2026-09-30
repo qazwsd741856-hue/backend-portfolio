@@ -6,6 +6,8 @@ from database import Base
 from models.user import User
 from models.product import Product
 from models.order import Order
+from models.outboxevent import OutboxEvent
+from models.processedevent import ProcessedEvent
 from alembic import context
 import os
 from dotenv import load_dotenv

@@ -5,3 +5,4 @@ __pycache__/
 *.db
 backups/
 .env.dev
+.env.test
