@@ -1,4 +1,4 @@
-from pydantic import BaseModel,ConfigDict
+from pydantic import BaseModel,ConfigDict,Field
 
 
 class ProductCreate(BaseModel):
@@ -30,3 +30,6 @@ class ProductPageReturn(BaseModel):
     items:list[ProductReturn]
     
     model_config=ConfigDict(from_attributes=True)
+
+class ProductStockUpdate(BaseModel):
+    amount:int=Field(gt=0)

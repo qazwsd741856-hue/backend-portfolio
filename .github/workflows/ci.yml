@@ -7,6 +7,29 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: portfolio_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: portfolio_test
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U portfolio_user -d portfolio_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports: 
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -22,7 +45,13 @@ jobs:
 
       - name: Run tests
         env:
-          DATABASE_URL: sqlite:///./ci.db
+          POSTGRES_USER: portfolio_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: portfolio_test
+          REDIS_HOST: localhost
+          REDIS_DB: 1
           SECRET_KEY: test-secret-key
 
         run: python -m pytest

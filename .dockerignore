@@ -8,3 +8,4 @@ compose.yaml
 nginx/
 backups/
 .env.dev
+.env.test
