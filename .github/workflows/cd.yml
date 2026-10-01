@@ -233,6 +233,7 @@ jobs:
               echo "Rollback failed"
             fi
             exit 1
+            "
 
 
 
