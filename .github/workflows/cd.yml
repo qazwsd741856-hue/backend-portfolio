@@ -13,11 +13,34 @@ jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
     env:
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
       APP_DOMAIN: ${{ vars.APP_DOMAIN }}
 
     steps:
+      - name: Checkout deployment commit
+        uses: actions/checkout@7
+        with: 
+          ref: ${{ env.DEPLOY_SHA }}
+      
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build API Image
+        run: |
+          docker build -t "ghcr.io/qazwsd741856-hue/backend-portfolio-api:$DEPLOY_SHA" .
+      - name: Push API Image
+        run: |
+          docker push "ghcr.io/qazwsd741856-hue/backend-portfolio-api:$DEPLOY_SHA" 
+      
       - name: Prepare SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -37,10 +60,14 @@ jobs:
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
+          GHCR_USERNAME: qazwsd741856-hue
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
         run: |
           ssh "$SERVER_USER@$SERVER_HOST" "
             DEPLOY_SHA='$DEPLOY_SHA'
             APP_DOMAIN='$APP_DOMAIN'
+            GHCR_USERNAME='$GHCR_USERNAME'
+            GHCR_READ_TOKEN='$GHCR_READ_TOKEN'
             IMAGE_TAG="\$DEPLOY_SHA"
 
             check_production(){
@@ -134,6 +161,8 @@ jobs:
             
             cd ~/backend-portfolio || exit 1
 
+            echo "\$GHCR_READ_TOKEN" | sudo docker login ghcr.io -u "\$GHCR_USERNAME" --password-stdin || exit 1
+            
             DISK_USAGE=\$(df -P / | awk 'NR==2 {print \$5}' | tr -d '%')
 
             if [ "\$DISK_USAGE" -ge 90 ]; then
@@ -148,6 +177,9 @@ jobs:
               echo "Disk usage is critically high: \${DISK_USAGE}%"
               exit 1
             fi
+            
+            API_IMAGE="ghcr.io/qazwsd741856-hue/backend-portfolio-api:\$DEPLOY_SHA"
+            sudo docker pull "\$API_IMAGE" || exit 1
             
             if sudo docker inspect backend-api --format "{{.Config.Image}}" > /dev/null 2>&1; then
               CURRENT_IMAGE=\$(sudo docker inspect backend-api --format "{{.Config.Image}}")
@@ -165,10 +197,7 @@ jobs:
             git reset --hard "\$DEPLOY_SHA" || exit 1
             
             PREPARE_SUCCESS=true
-            if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose -f compose.yaml -f compose.prod.yaml build api; then
-              echo "API image build failed"
-              PREPARE_SUCCESS=false
-            fi
+    
             if [ "\$PREPARE_SUCCESS" = "true" ]; then
               if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose -f compose.yaml -f compose.prod.yaml up -d --wait db redis; then
                 echo "DB or Redis running failed"
@@ -314,9 +343,9 @@ jobs:
             if [ "\$PREPARE_SUCCESS" = "true" ]; then
               if check_production; then
                 echo "Deployment successful"
-                DEPLOY_IMAGE="backend-portfolio-api:\$DEPLOY_SHA"
+                DEPLOY_IMAGE="ghcr.io/qazwsd741856-hue/backend-portfolio-api:\$DEPLOY_SHA"
 
-                for image in \$(sudo docker image ls "backend-portfolio-api:*" --format "{{.Repository}}:{{.Tag}}"); do
+                for image in \$(sudo docker image ls "ghcr.io/qazwsd741856-hue/backend-portfolio-api:*" --format "{{.Repository}}:{{.Tag}}"); do
                   if [ "\$image" = "\$DEPLOY_IMAGE" ] || [ "\$image" = "\$CURRENT_IMAGE" ]; then
                     echo "keep:\$image"
                   else
@@ -345,7 +374,7 @@ jobs:
 
             if check_production; then
               echo "Rollback successful"
-              FAILED_IMAGE="backend-portfolio-api:\$DEPLOY_SHA"
+              FAILED_IMAGE="ghcr.io/qazwsd741856-hue/backend-portfolio-api:\$DEPLOY_SHA"
               if sudo docker image rm "\$FAILED_IMAGE"; then
                 echo "Deleted failed deployment image: \$FAILED_IMAGE"
               else
