@@ -183,12 +183,133 @@ jobs:
             fi  
             
             if [ "\$PREPARE_SUCCESS" = "true" ]; then
-              if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose -f compose.yaml -f compose.prod.yaml up -d;then
-                echo "Production compose up failed"
+              if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose -f compose.yaml -f compose.prod.yaml up -d --no-deps api;then
+                echo "API start failed"
                 PREPARE_SUCCESS=false
               fi
             fi
             
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              echo "Waiting for API health"
+
+              API_SUCCESS=false
+
+              for i in {1..12}; do
+                status=\$(sudo docker inspect --format="{{.State.Health.Status}}" backend-api 2>/dev/null || echo "not-ready")
+
+                echo "API health status: \$status"
+
+                if [ "\$status" = "healthy" ]; then
+                  API_SUCCESS=true
+                  break
+                fi
+
+                sleep 5
+              done
+
+              if [ "\$API_SUCCESS" != "true" ]; then
+                echo "API failed to become healthy"
+                PREPARE_SUCCESS=false
+              fi
+            fi
+            
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              echo "Starting Worker"
+
+              if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose \
+                -f compose.yaml -f compose.prod.yaml \
+                up -d --no-deps worker; then
+
+                echo "Worker start failed"
+                PREPARE_SUCCESS=false
+              fi
+            fi
+
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              sleep 5
+            fi
+
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              echo "Starting Publisher"
+
+              if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose \
+                -f compose.yaml -f compose.prod.yaml \
+                up -d --no-deps publisher; then
+
+                echo "Publisher start failed"
+                PREPARE_SUCCESS=false
+              fi
+            fi
+            
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              echo "Starting Nginx"
+
+              if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose \
+                -f compose.yaml -f compose.prod.yaml \
+                up -d --no-deps web; then
+
+                echo "Nginx start failed"
+                PREPARE_SUCCESS=false
+              fi
+            fi
+            
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              echo "Starting Node Exporter"
+
+              if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose \
+                -f compose.yaml -f compose.prod.yaml \
+                up -d --no-deps node-exporter; then
+
+                echo "Node Exporter start failed"
+                PREPARE_SUCCESS=false
+              fi
+            fi
+
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              echo "Starting cAdvisor"
+
+              if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose \
+                -f compose.yaml -f compose.prod.yaml \
+                up -d --no-deps cadvisor; then
+
+                echo "cAdvisor start failed"
+                PREPARE_SUCCESS=false
+              fi
+            fi
+            
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              sleep 5
+            fi
+            
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              echo "Starting Prometheus"
+
+              if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose \
+                -f compose.yaml -f compose.prod.yaml \
+                up -d --no-deps prometheus; then
+
+                echo "Prometheus start failed"
+                PREPARE_SUCCESS=false
+              fi
+            fi
+
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              sleep 5
+            fi
+
+            if [ "\$PREPARE_SUCCESS" = "true" ]; then
+              echo "Starting Grafana"
+
+              if ! sudo IMAGE_TAG="\$IMAGE_TAG" docker compose \
+                -f compose.yaml -f compose.prod.yaml \
+                up -d --no-deps grafana; then
+
+                echo "Grafana start failed"
+                PREPARE_SUCCESS=false
+              fi
+            fi
+
+
             if [ "\$PREPARE_SUCCESS" = "true" ]; then
               if check_production; then
                 echo "Deployment successful"
