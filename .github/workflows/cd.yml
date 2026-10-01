@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout deployment commit
-        uses: actions/checkout@7
+        uses: actions/checkout@v7
         with: 
           ref: ${{ env.DEPLOY_SHA }}
       
