@@ -125,6 +125,7 @@ services:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys
       - --path.rootfs=/rootfs
+    restart: unless-stopped
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     volumes:
@@ -132,10 +133,12 @@ services:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /var/lib/docker:/var/lib/docker:ro
+    restart: unless-stopped
   grafana:
     image: grafana/grafana
     volumes:
       - grafana_data:/var/lib/grafana
+    restart: unless-stopped
 volumes:
   postgres_data:
   redis_data:
