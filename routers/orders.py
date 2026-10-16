@@ -1,11 +1,13 @@
 from fastapi import APIRouter,HTTPException,Depends,Query,Path
 from database import get_db
 from schemas.order import OrderCreate,OrderReturn,OrderUpdate
+from schemas.order_event import OrderEventReturn
 from sqlalchemy.orm import Session,selectinload
 from models.order import Order
 from models.product import Product
 from models.user import User 
 from models.outboxevent import OutboxEvent
+from models.processedevent import ProcessedEvent
 from sqlalchemy.exc import SQLAlchemyError,IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -196,3 +198,51 @@ async def update_order(data:OrderUpdate,
         raise HTTPException(status_code=500, detail="資料庫錯誤")
     
 
+@orders_router.get("/{id}/events",response_model=OrderEventReturn)
+async def get_order_events(
+    id:int=Path(gt=0),
+    db:AsyncSession=Depends(get_db),
+    current_user:User=Depends(get_current_user)
+):
+    stmt=select(Order).where(Order.id==id)
+    result=await db.execute(stmt)
+    order=result.scalar_one_or_none()
+
+    if order is None:
+        raise HTTPException(
+            status_code=404,
+            detail="未找到該筆訂單"
+        )
+    if current_user.role != "admin" and current_user.id != order.user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="無權查詢此訂單"
+        )
+    stmt=select(OutboxEvent).where(OutboxEvent.payload["order_id"].as_integer()==id,
+                                   OutboxEvent.event_type=="order_created"
+                                   ).order_by(OutboxEvent.id.desc()).limit(1)
+    result=await db.execute(stmt)
+    event=result.scalar_one_or_none()
+
+    if event is None:
+        raise HTTPException(
+        status_code=404,
+        detail="找不到此訂單的 Outbox Event"
+    )
+    stmt=select(ProcessedEvent).where(ProcessedEvent.event_id==event.id)
+    result=await db.execute(stmt)
+    processed_event=result.scalar_one_or_none()
+
+    return {"order_id":order.id,
+            "event_id":event.id,
+            "event_type":event.event_type,
+            "status":event.status,
+            "created_at":event.created_at,
+            "sent_at":event.sent_at,
+            "processed":processed_event is not None,
+            "processed_at":(
+                processed_event.processed_at
+                if processed_event is not None
+                else None
+            )
+    }
