@@ -14,7 +14,7 @@ loginForm.addEventListener("submit",async function(event){
         body:formData});
     const data=await response.json();
     if (!response.ok){
-        console.log("Login failed",data.detail);
+        document.getElementById("login-message").textContent="Login failed :"+data.detail;
         return;
     }
     sessionStorage.setItem("access_token",data.access_token);

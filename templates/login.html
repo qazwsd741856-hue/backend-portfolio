@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <main class="page-container">
+    <main class="page-container auth-page">
         <h1>Demo Login</h1>
         <p>Login to the Backend Portfolio demo.</p>
 
@@ -21,8 +21,13 @@
                 <label>Password</label>
                 <input name="password" type="password">
             </div>
+            <p id="login-message"></p>
             <button type="submit">Login</button>
         </form>
+        <p>
+            Don't have an account?
+            <a href="/demo/register">Create an account</a>
+        </p>
     </main>
     <script src="/static/js/login.js"></script>
 </body>

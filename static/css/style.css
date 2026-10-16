@@ -140,6 +140,7 @@ input:focus {
 }
 
 
+
 #login-link,
 #logout-button,
 #admin-link {
@@ -217,18 +218,60 @@ tbody tr:hover {
     min-width: 600px;
 }
 
-#login-form input {
+/* Login / Register 共用排版 */
+
+.auth-page {
+    max-width: 420px;
+    margin: 60px auto;
+    padding: 32px;
+}
+
+.auth-page h1,
+.auth-page > p {
+    text-align: center;
+}
+
+.auth-page form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.auth-page .form-group {
+    margin-bottom: 0;
+}
+
+.auth-page label {
+    display: block;
+}
+
+.auth-page input,
+.auth-page button {
     width: 100%;
     box-sizing: border-box;
 }
 
-#login-form {
-    max-width: 400px;
-    margin: 0 auto;
+.auth-page form button {
+    margin-top: 8px;
 }
 
-#login-form button {
-    width: 100%;
+.auth-page #login-message,
+.auth-page #register-message {
+    margin: 0;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.auth-page #login-message:empty,
+.auth-page #register-message:empty {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .auth-page {
+        margin: 16px;
+        padding: 24px;
+    }
 }
 
 #order-form {
@@ -305,6 +348,7 @@ tbody tr:hover {
     padding: 16px;
     }
 }
+
 
 [hidden] {
     display: none !important;

@@ -78,3 +78,9 @@ async def events_page(request:Request):
         request,
         name="events.html"
     )
+@demo_router.get("/demo/register")
+async def register_page(request:Request):
+    return templates.TemplateResponse(
+        request,
+        name="register.html"
+    )
