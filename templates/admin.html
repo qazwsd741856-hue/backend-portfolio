@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Admin Management</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <main class="page-container">
+        <h1>Admin Management</h1>
+        <section>
+            <h2>Users</h2>
+            <p id="admin-message">Admin page ready</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Active</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="admin-users-body">
+
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <a href="/">Back to Dashboard</a>
+
+    </main>
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>

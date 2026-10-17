@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders Demo</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <main class="page-container">
+        <h1>Order History</h1>
+        <p>View your order history.</p>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th>User</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="order-table-body">
+
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination">
+            <button id="previous-page" disabled>Previous</button>
+            <span id="page-number">Page 1</span>
+            <button id="next-page" disabled>Next</button>
+        </div>
+        <section id="order-detail">
+            <h2>Order Detail</h2>
+            <p id="order-detail-message">Select an order to view details.</p>
+            <button id="delete-order-button" disabled>Delete Order</button>
+        </section>
+
+        <section id="order-event">
+            <h2>Order Events</h2>
+            <p id="order-events-message">Select an order to view its event status.</p>
+        </section>
+
+        <p id="orders-message"></p>
+        <a href="/">Back to Dashboard</a>
+    </main>
+
+    <script src="/static/js/orders.js"></script>
+</body>
+</html>

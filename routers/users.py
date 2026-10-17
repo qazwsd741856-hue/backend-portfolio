@@ -1,8 +1,8 @@
 from fastapi import APIRouter,HTTPException,Depends,Request
 from fastapi.security import OAuth2PasswordRequestForm
 from database import get_db
-from security import hash_password ,verify_password,create_access_token
-from schemas.user import UserCreate,UserReturn
+from security import hash_password ,verify_password,create_access_token,get_current_user
+from schemas.user import UserCreate,UserReturn,AdminUserReturn
 from models.user import User
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -74,3 +74,9 @@ async def login_user(request:Request,
     token=create_access_token(data={"sub":str(user.id)})
     
     return {"access_token":token,"token_type":"bearer"}
+
+@user_router.get("/me", response_model=AdminUserReturn)
+async def get_me(
+    user: User = Depends(get_current_user)
+):
+    return user

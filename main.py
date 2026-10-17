@@ -1,4 +1,5 @@
 from fastapi import FastAPI,Request
+from fastapi.staticfiles import StaticFiles
 from logging_config import setup_logging
 setup_logging()
 from context_var import request_id
@@ -7,6 +8,7 @@ from routers.products import product_router
 from routers.users import user_router
 from routers.orders import orders_router
 from routers.admin import admin_router
+from routers.demo import demo_router
 from sentry_config import setup_sentry
 from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import HTTPException
@@ -14,10 +16,12 @@ from fastapi import HTTPException
 setup_sentry()
 
 app = FastAPI(title="Backend Portfolio API")
+app.mount("/static",StaticFiles(directory="static"),name="static")
 app.include_router(product_router)
 app.include_router(user_router)
 app.include_router(orders_router)
 app.include_router(admin_router)
+app.include_router(demo_router)
 
 instrumentator=Instrumentator()
 instrumentator.instrument(app)

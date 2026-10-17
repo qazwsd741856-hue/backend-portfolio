@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Backend Portfolio</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <main class="page-container auth-page">
+        <h1>Create Account</h1>
+
+        <form id="register-form">
+            <label for="name">Username</label>
+            <input
+                type="text"
+                id="name"
+                name="name"
+                required
+            >
+
+            <label for="email">Email</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                required
+            >
+
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                required
+            >
+            <p id="register-message"></p>
+            <button type="submit">Register</button>
+        </form>
+
+
+        <p>
+            Already have an account?
+            <a href="/demo/login">Login</a>
+        </p>
+    </main>
+
+    <script src="/static/js/register.js"></script>
+</body>
+</html>

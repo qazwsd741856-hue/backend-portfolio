@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events Monitor</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <main class="page-container">
+        <h1>Events Monitor</h1>
+        <p>Inspect asynchronous order event processing</p>
+        <div class="search-bar">
+            <label for="order-id">Order ID</label>
+            <input id="order-id" type="number" min="1" placeholder="Enter Order ID" step="1" required>
+            <button id="search-event-button">Search</button>
+        </div>
+        <p id="event-message"></p>
+        <div id="event-result" hidden>
+            <h2>Event Details</h2>
+            <table>
+                <tbody>
+                    <tr>
+                        <th scope="row">Order ID</th>
+                        <td id="result-order-id"></td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Event ID</th>
+                        <td id="result-event-id"></td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Event Type</th>
+                        <td id="result-event-type"></td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Status</th>
+                        <td id="result-status"></td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Processed</th>
+                        <td id="result-processed"></td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Created At</th>
+                        <td id="result-created-at"></td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Sent At</th>
+                        <td id="result-sent-at"></td>
+                    </tr>
+
+                    <tr>
+                        <th scope="row">Processed At</th>
+                        <td id="result-processed-at"></td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+        <a href="/">Back to Dashboard</a>
+
+    </main>
+    <script src="/static/js/events.js"></script>
+</body>
+</html>

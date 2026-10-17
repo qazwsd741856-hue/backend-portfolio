@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Portfolio V4</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="hero">
+        <h1>Backend Portfolio V4</h1>
+        <p>Interactive Backend System Demo</p>
+    </div>
+
+    <div id="auth-section">
+        <a id="login-link" href="/demo/login">Login</a>
+        <p id="welcome-message" hidden></p>
+        <a id="admin-link" href="/demo/admin" hidden>Admin Management</a>
+        <button id="logout-button" hidden>Logout</button>
+    </div>
+
+    <div class="status">
+        <h2>System Status</h2>
+
+        <div class="status-cards">
+
+            <div class="status-card">
+                <h3>API</h3>
+                    {% if api_status == "Healthy" %}
+                        <span class="healthy">Healthy</span>
+                    {% else %}
+                        <span class="unhealthy">Unhealthy</span>
+                    {% endif %}
+            </div>
+            <div class="status-card">
+                <h3>PostgreSQL</h3>
+                {% if db_status == "Healthy" %}
+                    <span class="healthy">Healthy</span>
+                {% else %}
+                    <span class="unhealthy">Unhealthy</span>
+                {% endif %}
+            </div>
+            <div class="status-card">
+                <h3>Redis</h3>
+                {% if redis_status == "Healthy" %}
+                    <span class="healthy">Healthy</span>
+                {% else %}
+                    <span class="unhealthy">Unhealthy</span>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    <div class="actions">
+        <h2>Demo Actions</h2>
+
+        <div class="action-cards">
+            <div class="action-card">
+                <h3>products</h3>
+                <p>View products and current stock.</p>
+                <a href="/demo/products">Open products</a>
+            </div>
+
+            <div class="action-card">
+                <h3>orders</h3>
+                <p>View your order history.</p>
+                <a href="/demo/orders">Open orders</a>
+            </div>
+
+            <div class="action-card">
+                <h3>Events</h3>
+                <p>View asynchronous event processing.</p>
+                <a href="/demo/events">Open events</a>
+            </div>
+        </div>
+    </div>
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>
