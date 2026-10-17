@@ -1,369 +1,131 @@
-# Backend Portfolio
+# Backend Portfolio V4
 
-以 **FastAPI** 開發並實際部署的 RESTful API 後端作品，涵蓋使用者、商品與訂單管理，並整合 **JWT / RBAC、PostgreSQL、Redis、並發庫存控制、Transactional Outbox、Celery、Monitoring 與 CI/CD**。
-
-Production 部署於 **Google Cloud Compute Engine**，由 Docker Compose 管理，Nginx 提供 Reverse Proxy 與 HTTPS；GitHub Actions 負責自動測試、建立版本化 Docker Image 並推送到 GHCR，並部署至 VM。
+以 **FastAPI** 打造的全端作品集，整合 REST API、PostgreSQL、Redis、Celery、JWT 權限管理、監控與 CI/CD，並提供可實際操作的 Web Dashboard。系統已部署至 **Google Cloud Compute Engine**，使用 Docker Compose、Nginx 與 HTTPS 運行。
 
 ## Live Demo
 
-- API: https://backend-portfolio-api.duckdns.org
-- Swagger UI: https://backend-portfolio-api.duckdns.org/docs
-- Health Check: https://backend-portfolio-api.duckdns.org/health
+**正式網站：** https://backend-portfolio-api.duckdns.org/
 
-## Key Features
+[Dashboard](https://backend-portfolio-api.duckdns.org/) · [登入](https://backend-portfolio-api.duckdns.org/demo/login) · [註冊](https://backend-portfolio-api.duckdns.org/demo/register) · [Swagger API](https://backend-portfolio-api.duckdns.org/docs)
 
-### Authentication & Authorization
+### Demo Accounts
 
-- 使用者註冊 / 登入
-- Argon2 密碼雜湊
-- OAuth2 + JWT Access Token
-- User / Admin RBAC
-- 使用者停權管理
-- Redis Login Rate Limit（60 秒 10 次）
-- Redis 異常時採 Fail Open
+| 角色 | Email | 密碼 |
+|---|---|---|
+| User | `user1@test.com` | `123456` |
+| Admin | `toby@test.com` | `123456` |
 
-### Product & Cache
+> Demo 帳號使用正式環境的展示資料；Admin 具有使用者管理權限。
 
-- 商品 CRUD、篩選、排序與 Pagination
-- Admin-only 商品管理
-- Redis Cache-Aside
-- TTL / Cache Invalidation
-- Redis 異常時回退 Database
+## Features
 
-### Order & Concurrency
-
-- 訂單 CRUD 與使用者資料隔離
-- Admin 可管理所有訂單
-- 建立 / 修改 / 刪除訂單時同步維護庫存
-- PostgreSQL `SELECT ... FOR UPDATE` Row-Level Lock
-- Transaction Commit / Rollback
-- 並發測試驗證庫存僅剩 1 時，兩個同時下單請求只有一個成功
-
-### Background Processing
-
-- Transactional Outbox Pattern
-- Order、Stock、Outbox Event 於同一 Database Transaction 處理
-- Publisher 發送待處理事件
-- Redis 作為 Celery Broker
-- Celery Worker 執行背景任務
-- 成功後將 Outbox Event 更新為 `sent`
-
-### Observability
-
-- UUID Request ID + `ContextVar`
-- `X-Request-ID` Response Header
-- Request ID 可傳遞至 Outbox / Worker Log
-- FastAPI `/metrics`
-- Prometheus + Grafana
-- Node Exporter + cAdvisor
-
-## Tech Stack
-
-| Category | Technologies |
+| 功能 | 說明 |
 |---|---|
-| Backend | Python 3.12, FastAPI, Uvicorn, Pydantic |
-| Database | PostgreSQL 17, SQLAlchemy, Alembic |
-| Authentication | OAuth2, JWT, Argon2 |
-| Cache / Broker | Redis 7 |
-| Background Processing | Celery, Transactional Outbox |
-| Testing | Pytest, AnyIO, HTTPX |
-| Infrastructure | Docker, Docker Compose, Nginx |
-| Monitoring | Prometheus, Grafana, Node Exporter, cAdvisor |
-| Deployment | Google Cloud Compute Engine, Let's Encrypt |
-| CI/CD | GitHub Actions, GHCR |
+| Dashboard | 系統狀態、使用者資訊與功能入口 |
+| Register / Login | 使用者註冊、JWT 登入與帳號停權驗證 |
+| Products | 商品清單、分頁、庫存顯示 |
+| Orders | 建立及刪除訂單、自動扣除與回補庫存 |
+| Order Events | 查詢 Outbox 事件發送與背景處理狀態 |
+| Admin | 使用者清單、角色及啟用狀態管理 |
+| API Security | JWT、RBAC、訂單所有權驗證、Redis 登入限流 |
+| Reliability | PostgreSQL Row-Level Lock、Transactional Outbox、Celery |
+| Observability | Request ID、Prometheus、Grafana、Node Exporter、cAdvisor |
 
 ## System Architecture
 
-![Backend Portfolio API System Architecture](assets/system-architecture.png)
+![Backend Portfolio V4 Architecture](assets/system-architecture-v4.png)
 
-```text
-                         Internet
-                            |
-                         HTTPS
-                            |
-                          Nginx
-                            |
-                         FastAPI
-                       /         \
-                      v           v
-               PostgreSQL       Redis
-                    |            /   \
-                    v           v     v
-              OutboxEvent     Cache  Celery Broker
-                    |                  |
-                Publisher              v
-                    └──────────────> Worker
+**主要資料流程：**
 
-FastAPI /metrics ─┐
-Node Exporter ────┼──> Prometheus ───> Grafana
-cAdvisor ─────────┘
-```
+1. 瀏覽器透過 HTTPS / Nginx 存取 FastAPI 與 Jinja2 Web UI。
+2. FastAPI 透過 PostgreSQL 儲存使用者、商品與訂單；Redis 提供快取、登入限流及 Celery Broker。
+3. 訂單與 `OutboxEvent` 在同一個資料庫交易中寫入，Publisher 將事件送往 Celery Worker。
+4. Worker 完成背景處理後記錄 `ProcessedEvent`，前端可查詢事件狀態。
+5. Prometheus 收集監控指標，Grafana 提供視覺化監控。
 
-Production 對外入口由 Nginx 提供；FastAPI、PostgreSQL、Redis、Worker、Publisher 與 Monitoring Services 透過 Docker Network 內部通訊。
+## Tech Stack
 
-## API Overview
+| 分類 | 技術 |
+|---|---|
+| Backend | Python 3.12、FastAPI、SQLAlchemy、Pydantic、Alembic |
+| Frontend | Jinja2、HTML、CSS、JavaScript、Fetch API |
+| Database | PostgreSQL 17 |
+| Cache / Broker | Redis 7 |
+| Async Jobs | Celery、Transactional Outbox |
+| Authentication | OAuth2、JWT、Argon2、RBAC |
+| Testing | Pytest、HTTPX、AnyIO |
+| Deployment | Docker Compose、Nginx、Let's Encrypt、GCP Compute Engine |
+| CI/CD | GitHub Actions、GitHub Container Registry（GHCR） |
+| Monitoring | Prometheus、Grafana、Node Exporter、cAdvisor |
 
-| Resource | Main Endpoints | Permission |
-|---|---|---|
-| Users | Register / Login | Public |
-| Products | GET | Public |
-| Products | Create / Update / Delete / Stock | Admin |
-| Orders | CRUD | User / Admin |
-| Admin Users | List / Role / Status | Admin |
+## API & Web Routes
 
-完整 Request / Response 格式請參考 Swagger UI。
+| 路徑 | 功能 |
+|---|---|
+| `/` | Dashboard |
+| `/demo/login` | 登入頁 |
+| `/demo/register` | 註冊頁 |
+| `/demo/products` | 商品頁 |
+| `/demo/orders` | 訂單頁 |
+| `/demo/events` | 訂單事件頁 |
+| `/demo/admin` | 管理員頁 |
+| `/users`、`/users/login` | 註冊與登入 API |
+| `/products`、`/orders` | 商品與訂單 API |
+| `/orders/{id}/events` | 訂單事件查詢 |
+| `/admin/users` | 管理員使用者 API |
+| `/docs` | Swagger UI |
+| `/health` | 健康檢查 |
+| `/metrics` | Prometheus 指標 |
 
-## Concurrency & Transaction Safety
-
-訂單建立與修改涉及庫存，因此透過 PostgreSQL Row-Level Lock 鎖定 Product：
-
-```python
-select(Product).where(Product.id == product_id).with_for_update()
-```
-
-並發測試情境：
-
-```text
-Initial Stock = 1
-
-Request A ─┐
-           ├── Concurrent Create Order
-Request B ─┘
-
-Result:
-1 request  -> 201 Created
-1 request  -> 400 Bad Request
-stock      -> 0
-orders     -> 1
-```
-
-藉此驗證同一商品在並發請求下不會發生超賣。
-
-## Transactional Outbox
-
-建立訂單時，核心資料與事件在同一 Transaction 中寫入：
-
-```text
-POST /orders
-     |
-     v
-Database Transaction
-     |
-     +--> Create Order
-     +--> Update Stock
-     +--> Create OutboxEvent
-     |
-   Commit
-     |
-     v
- Publisher
-     |
-     v
-Redis / Celery
-     |
-     v
-   Worker
-```
-
-Production End-to-End 驗證已確認 `order_created` 事件可由 Publisher 發送至 Celery Worker 並成功處理，同一個 `request_id` 也可一路追蹤至 Worker。
-
-## Monitoring
-
-FastAPI 使用 `prometheus-fastapi-instrumentator` 取得 `/metrics`，Prometheus 每 15 秒 Scrape：
-
-- FastAPI
-- Node Exporter
-- cAdvisor
-
-目前可觀察 HTTP Request Count、Status、Request Duration、Host Metrics 與 Container Metrics。
-
-Production 驗證時三個 Prometheus Targets 均為 `UP`，Grafana Health Check 亦正常。
-
-## Testing
-
-```bash
-python -m pytest
-```
-
-目前：
-
-
-測試涵蓋 Authentication、RBAC、Products、Orders、Inventory 與 Concurrent Order Creation；Push / Pull Request 時 CI 也會自動執行測試。
-
-## CI/CD
+## CI/CD Deployment
 
 ```text
 Push / Pull Request
-        |
-        v
-       CI
-        |
-        +--> Pytest
-        +--> Docker Build Validation
-        |
-        | main CI passed
-        v
-       CD
-        |
-        +--> Checkout DEPLOY_SHA
-        +--> Build API Image
-        +--> Tag with Git Commit SHA
-        +--> Push to GHCR
-        |
-        v
-   SSH to GCP VM
-        |
-        +--> Pull GHCR Image
-        +--> Reset Repository to DEPLOY_SHA
-        +--> Start PostgreSQL + Redis
-        +--> Alembic Migration
-        +--> Start / Health Check FastAPI
-        +--> Start Worker + Publisher + Nginx
-        +--> Start Monitoring Services
-        |
-        v
- Production Validation
-        |
-        +--> API / Worker / Publisher
-        +--> Nginx Config + HTTPS
-        +--> Prometheus Config / Targets
-        +--> Grafana Health    
-     /    \
- success  failure
-    |        |
-   Done   Rollback
+        ↓
+GitHub Actions CI（Pytest + Docker Build）
+        ↓
+Merge to main → CI Success
+        ↓
+GitHub Actions CD
+        ↓
+Build Image → Push to GHCR
+        ↓
+SSH to GCP VM → Docker Compose Deploy
+        ↓
+Health Check / Deployment Validation
+        ├── Success → Complete
+        └── Failure → Rollback
 ```
 
-Production VM **不負責 Build API Image**。GitHub Actions 建立 Image 後推送至 GHCR，VM 依 Git commit SHA Pull 對應版本：
+正式環境以 Git Commit SHA 標記 Docker Image，確保部署版本可追蹤。
 
-```text
-ghcr.io/<owner>/backend-portfolio-api:<DEPLOY_SHA>
-```
+## Verification
 
-部署採 Staged Startup；核心服務與 API 通過health check 後才逐步啟動其餘服務。部署失敗時則嘗試rollback至上一個可用版本。
+**自動化測試：`46 passed`（Pytest）**
 
-## Production Infrastructure
+V4 已完成正式環境部署及實際操作驗收：
 
-Docker Compose 管理：
+| 驗證項目 | 結果 |
+|---|---|
+| GitHub Actions CI/CD | PASS |
+| HTTPS、Login、Dashboard | PASS |
+| PostgreSQL 商品與使用者資料 | PASS |
+| User / Admin RBAC（403 / Admin Access） | PASS |
+| 訂單建立、庫存扣除 | PASS |
+| 訂單刪除、庫存回補 | PASS |
+| Outbox → Publisher → Celery Worker | PASS |
+| Event `Completed` | PASS |
+| Admin 停權、阻擋登入、恢復帳號 | PASS |
+| Docker Compose 10 個服務運行 | PASS |
 
-```text
-Docker Compose
-├── Nginx
-├── FastAPI
-├── PostgreSQL
-├── Redis
-├── Celery Worker
-├── Outbox Publisher
-├── Prometheus
-├── Grafana
-├── Node Exporter
-└── cAdvisor
-```
-
-Production 另包含：
-
-- Nginx Reverse Proxy + HTTPS / Let's Encrypt
-- Container Health Check
-- `restart: unless-stopped`
-- Log Rotation
-- Versioned GHCR Image
-- Deployment Health Validation / Rollback
-- Google Cloud VM Instance Schedule
-- Persistent Disk Snapshot Schedule
-
-所有長時間執行的服務均設定 `restart: unless-stopped`。實際 VM Stop → Start 測試已確認 Containers 能由 Docker 自動恢復並回到 Health 狀態。
-
-## Project Structure
-
-```text
-backend-portfolio/
-├── .github/
-│   └── workflows/
-│       ├── ci.yml
-│       └── cd.yml
-├── alembic/
-│   └── versions/               # Database Migrations
-├── assets/
-│   └── system-architecture.png
-├── models/                     # SQLAlchemy Models
-│   ├── user.py
-│   ├── product.py
-│   ├── order.py
-│   ├── outboxevent.py
-│   └── processedevent.py
-├── nginx/
-│   ├── default.conf
-│   └── default.prod.conf
-├── routers/                    # FastAPI Routers
-│   ├── users.py
-│   ├── products.py
-│   ├── orders.py
-│   └── admin.py
-├── schemas/                    # Pydantic Schemas
-│   ├── user.py
-│   ├── product.py
-│   └── order.py
-├── scripts/
-│   └── check_monitoring.py
-├── tests/
-│   ├── conftest.py
-│   ├── test_users.py
-│   ├── test_products.py
-│   └── test_orders.py
-├── main.py
-├── database.py
-├── security.py
-├── cache.py
-├── redis_client.py
-├── celery_app.py
-├── outbox_publisher.py
-├── context_var.py
-├── logging_config.py
-├── sentry_config.py
-├── prometheus.yml
-├── compose.yaml
-├── compose.dev.yaml
-├── compose.prod.yaml
-├── dockerfile
-├── requirements.txt
-├── requirements.dev.txt
-└── README.md
-```
-
-## Local Development
-
-參考 `.env.example` 建立 `.env.dev`：
+## Run Locally
 
 ```bash
-docker compose --env-file .env.dev \
-  -f compose.yaml \
-  -f compose.dev.yaml \
-  up -d --build
+# 建立本機環境設定（依專案 env 範例填入必要變數）
+docker compose --env-file .env.dev -f compose.yaml -f compose.dev.yaml up -d --build
+
+# 執行測試
+python -m pytest -q
 ```
 
-啟動後：
-
-- Swagger UI: http://localhost/docs
-- Health Check: http://localhost/health
-
-## V3 Production Validation
-
-V3 完成後已實際驗證：
-
-```text
-HTTPS / Nginx                  PASS
-FastAPI Health Check           PASS
-Login / JWT                    PASS
-User / Admin RBAC              PASS
-PostgreSQL                     PASS
-Product / Order Flow           PASS
-Stock Deduction                PASS
-Outbox → Publisher → Worker    PASS
-Request ID Propagation         PASS
-Prometheus Targets / Metrics   PASS
-Grafana Health                 PASS
-VM Stop / Start Recovery       PASS
-CI/CD Production Deployment    PASS
-```
-
-V3 的核心目標是將 API、Database、Cache、Concurrency Control、Background Processing、Observability 與 CI/CD 整合成一套可實際部署、監控與驗證的後端系統。
+本機網頁入口：`http://localhost/`；API 文件：`http://localhost/docs`。
